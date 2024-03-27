@@ -5,6 +5,7 @@ import re
 actual_subtotal = 0.0
 actual_total = 0.0
 pdf_text = ""
+shopped_items = []
 
 # Global Regular expression patterns
 price_with_float_pattern = r'\$\d+\.\d{2}'
@@ -21,10 +22,9 @@ def extract_text_from_pdf(pdf_path: str):
 def extract_and_remove_unavailable_items(initial_pdf_text: str):
     global pdf_text
     pdf_text = ""
-    pdf_text_lines = initial_pdf_text.splitlines()
     unavailable_item_lines = []
     pdf_lines = []
-    for line in pdf_text_lines:
+    for line in initial_pdf_text.splitlines():
         if line.__contains__("Unavailable"):
             unavailable_item_lines.append(line)
         else:
@@ -69,7 +69,7 @@ def calculate_expected_subtotal(pdf_text):
     
     # Sum prices to calculate expected_subtotal
     expected_subtotal = 0.0
-    for i, match in enumerate(price_matches):
+    for _, match in enumerate(price_matches):
         value = float(match.replace('$', ''))
         expected_subtotal += value
         print(value)
@@ -126,17 +126,31 @@ def extract_total(pdf_text):
         print("Invalid total price format")
     return round(total_price, 2)
 
+def extract_shopped_items_list(input_pdf_text: str):
+    start_till_subtotal_pattern = r'^.*?(?=Subtotal)'
+    items_text_match = re.search(start_till_subtotal_pattern, input_pdf_text, re.DOTALL)
+    items_pdf_text = items_text_match.group()
+    
+    shopped_items_list = []
+    item_description_wtih_qty_pattern = r'^.*\$'
+    for line in items_pdf_text.splitlines():
+        item_description = re.search(item_description_wtih_qty_pattern, line)
+        if item_description:
+            shopped_items_list.append(item_description.group()[:-1])
+    return shopped_items_list
 
 # Replace 'path_to_pdf.pdf' with the path to your PDF bill receipt file
-pdf_path = 'Bill2_WithUnavailable.pdf'
+pdf_path = 'Bill3_WithRefund.pdf'
 pdf_text = extract_text_from_pdf(pdf_path)
 
 if len(pdf_text)<2:
     print("Unable to extract text, Image based PDF or incorrect PDF selected!")
     exit
 
-unavailable_items = extract_and_remove_unavailable_items(pdf_text)
-print(pdf_text)
+unavailable_item_lines = extract_and_remove_unavailable_items(pdf_text)
+
+shopped_items = extract_shopped_items_list(pdf_text)
+print(shopped_items)
 
 
 actual_subtotal = extract_actual_subtotal(pdf_text)
